@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Jumbotron, Container, Col, Form, Button, Card, CardColumns } from 'react-bootstrap';
 
+import { useMutation } from '@apollo/client';
+import {SAVE_BOOK} from '../utils/mutations';
+import { GET_ME } from '../utils/queries';
 import Auth from '../utils/auth';
-import { saveBook, searchGoogleBooks } from '../utils/API';
 import { saveBookIds, getSavedBookIds } from '../utils/localStorage';
+
+  // define the save book function from the mutation
+  const [saveBook] = useMutation(SAVE_BOOK)
 
 const SearchBooks = () => {
   // create state for holding returned google api data
@@ -65,7 +70,13 @@ const SearchBooks = () => {
     }
 
     try {
-      const response = await saveBook(bookToSave, token);
+      await saveBook({
+        variables: {book: bookToSave},
+        update: cache => {
+          const {me} = cache.readQuery({ query: GET_ME });
+          cache.writeQuery({ query: GET_ME , data: {me: { ...me, savedBooks: [...me.savedBooks, bookToSave] } } })
+        }
+      });
 
       if (!response.ok) {
         throw new Error('something went wrong!');
